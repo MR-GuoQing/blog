@@ -2,23 +2,7 @@
   "relation": ["delegate_permission/common.handle_all_urls"],
   "target": {
     "namespace": "android_app",
-    "package_name": "com.sap.piat.c4c.applink",
-    "sha256_cert_fingerprints":
-    ["2E:7A:6A:79:3E:D5:D5:2A:0F:BC:43:93:6F:99:96:14:D8:BE:9F:A6:91:BA:B1:B7:81:8B:E8:EF:61:14:AF:BD"]
-  }
-},
-{
-  "relation": ["delegate_permission/common.get_login_creds"],
-  "target": {
-    "namespace": "web",
-    "site": "https://mr-guoqing.github.io"
-  }
-},
-{
-  "relation": ["delegate_permission/common.get_login_creds"],
-  "target": {
-    "namespace": "android_app",
-    "package_name": "com.sap.piat.c4c.applink",
+    "package_name": "com.sap.piat.c4c.applink2",
     "sha256_cert_fingerprints":
     ["2E:7A:6A:79:3E:D5:D5:2A:0F:BC:43:93:6F:99:96:14:D8:BE:9F:A6:91:BA:B1:B7:81:8B:E8:EF:61:14:AF:BD"]
   }
