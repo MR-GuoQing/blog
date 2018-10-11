@@ -24,4 +24,13 @@
     "sha256_cert_fingerprints":
     ["2E:7A:6A:79:3E:D5:D5:2A:0F:BC:43:93:6F:99:96:14:D8:BE:9F:A6:91:BA:B1:B7:81:8B:E8:EF:61:14:AF:BD"]
   }
+},
+{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.sap.m.applink3",
+    "sha256_cert_fingerprints":
+    ["AE:4F:AD:EE:DA:21:F6:CB:15:2E:69:10:FB:0B:35:0D:70:B0:EE:33:C2:E2:E9:14:40:22:06:93:34:E3:A3:E4"]
+  }
 }]
