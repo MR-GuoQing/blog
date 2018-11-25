@@ -1,18 +1,18 @@
 # Site settings
 title: BY Blog
 SEOTitle: MR-GuoQing的博客 | guoqing Blog
-header-img: img/post-bg-desk.jpg
-email: qiubaiying@gmail.com
+header-img: img/bg-index.jpg
+email: guoqing.zhang.1990@gmail.com
 description: "Every failure is leading towards success."
 keyword: " MR-GuoQing, zhangguoqing, 张国庆, android, java, java script,ios"
 url: "http://mr-guoqing.github.io"          # your host, for absolute URL
 baseurl: ""      # for example, '/blog' if your blog hosted on 'host/blog'
-github_repo: "https://github.com/qiubaiying/qiubaiying.github.io.git" # you code repository
+github_repo: "https://github.com/mr-guoqing/mr-guoqing.github.io.git" # you code repository
 
 # Sidebar settings
-sidebar: true                           # whether or not using Sidebar.
-sidebar-about-description: "Goals determine what you going to be!"
-sidebar-avatar: /img/about-BY-gentle.jpg      # use absolute URL, seeing it's used in both `/` and `/about/`
+sidebar: false                           # whether or not using Sidebar.
+sidebar-about-description: "keep going"
+sidebar-avatar: /img/about-gentle.jpg      # use absolute URL, seeing it's used in both `/` and `/about/`
 
 
 
