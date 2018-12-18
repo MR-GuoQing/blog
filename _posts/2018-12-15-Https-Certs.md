@@ -46,9 +46,13 @@ TLS/SSL机制分为两个方面：
   ![serverhello](/img/posts/serverhello.png)
   在确认客户端的TLS通信版本、加密算法等后，服务端就可以向客户端发送证书了，如下图：
   ![certificate](/img/posts/certificate.png)  
-  如果客户端和服务端所采用的加密算法比较特殊如DH，server端可以在向客户端发送一个server-key-exchange请求，又或者server端需要验证客户端的身份又会在发送一个certificate-request消息。最后服务端会发送server-done消息表明server端请求结束，如下图：
+  如果客户端和服务端所采用的加密算法比较特殊如DH，server端可以在向客户端发送一个server-key-exchange请求，又或者server端需要验证客户端的身份又会在发送一个certificate-request消息。最后服务端会发送server-done消息表明server端请求结束，然后等待client的响应。如下图：
   ![serverdone](/img/posts/serverdone.png)
 
 
- 3. 客户端回应
- 如果服务端需要
+ 3. 客户端回应  
+ 当客户端收到Server Done消息后，如果Server端需要验证客户端的证书则首先发送一个Certificate消息。如果客户端没有合适的证书也必须发送一个空的Certificate消息，server端接受不到证书则握手失败。如果server端不要求验证client的证书，则client的第一个消息就是Client Key Exchange消息，这个消息的作用主要是生成premaster key（RSA或者Diffie-Hellman加密算法生成）用来和之前hello阶段的随机数生成Master secret用于之后的生成加密通信。然后客户端开始验证服务端证书。如下图所示：
+ ![clientresponse](/img/posts/clientresponse.png)
+
+ 4. 服务端Finish
+ 服务端收到客户端的消息后验证完数据后便会发送一个ChangeCipherSpec，表明已经使用之前协商的Secret Suits来加密数据了，然后便使用这个加密finish消息发送给客户端，表明握手成功。
