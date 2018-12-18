@@ -28,7 +28,7 @@ tags:
 - 任何人都无法修改你得数据
 - 你可以确定你所通信的服务是可信的  
 
-&nbsp;&nbsp;&nbsp;&nbsp;而做到这两点就需要加密和签名，TLS/SSL采用非对称式加密public key和private key来加密数据。其中public key是公有的任何人都可以得到，因此你无法确定这个公有的key是不是真的。为了确定这个公有的key就是你想要的，引入了数字证书。证书就相当于身份证，在public key和一个受信任的第三方（CA）建立一个连接即签名。在向第三方机构申请数字证书时，会提交自己的public key，因此得到了这个数字证书既能证明自己的身份，其他人也能得到public key。只要证书是可信性的机构颁布的，那么public key就是可信的。
+&nbsp;&nbsp;&nbsp;&nbsp;而做到这两点就需要加密和签名，TLS/SSL采用非对称式加密public key和private key来加密数据。其中public key是公有的任何人都可以得到，因此你无法确定这个公有的key是不是真的。为了确定这个公有的key就是你想要的，引入了数字证书。证书就相当于身份证，在public key和一个受信任的第三方（CA）建立一个连接即签名。在向第三方机构申请数字证书时，会提交自己的public key，因此得到了这个数字证书既能证明自己的身份，其他人也能得到证书里的public key。只要证书是可信性的机构颁布的，那么public key就是可信的。
 
 ### TLS/SSL机制
 
@@ -38,7 +38,7 @@ TLS/SSL机制分为两个方面：
 - 通信阶段
    双方通过密匙来加密通信   
 
-主要机制即握手阶段，握手阶段分为四部分，本文将通过wireshark抓包来来展示具体请求。如图所示的整个握手的时序图：
+&nbsp;&nbsp;&nbsp;&nbsp;主要机制即握手阶段，握手阶段分为四部分，本文将通过wireshark抓包来来展示具体请求。如图所示的整个握手的时序图：
 
 ![ssl](/img/posts/TLS-SSL.png)  
 1. Client Hello  
