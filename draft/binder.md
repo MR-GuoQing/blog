@@ -1,4 +1,4 @@
-先看lib的实现：
+
 ```java
 // IFibonacciService.aidl
 package com.zgq.android.fibonaccicommon;
