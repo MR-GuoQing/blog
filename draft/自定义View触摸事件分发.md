@@ -39,25 +39,8 @@ Android中Activity是负责所有与用户交互的事务，所有可视界面�
 dispatchTouchEvent方法中所有的down事件都会先由onUserInteraction()处理，方法如下所示：
 ```java
 //from Activity.java
-/**
-     * Called whenever a key, touch, or trackball event is dispatched to the
-     * activity.  Implement this method if you wish to know that the user has
-     * interacted with the device in some way while your activity is running.
-     * This callback and {@link #onUserLeaveHint} are intended to help
-     * activities manage status bar notifications intelligently; specifically,
-     * for helping activities determine the proper time to cancel a notfication.
-     *
-     * <p>All calls to your activity's {@link #onUserLeaveHint} callback will
-     * be accompanied by calls to {@link #onUserInteraction}.  This
-     * ensures that your activity will be told of relevant user activity such
-     * as pulling down the notification pane and touching an item there.
-     *
-     * <p>Note that this callback will be invoked for the touch down action
-     * that begins a touch gesture, but may not be invoked for the touch-moved
-     * and touch-up actions that follow.
-     *
-     * @see #onUserLeaveHint()
-     */
+
+
     public void onUserInteraction() {
     }
 
@@ -101,5 +84,139 @@ private DecorView mDecor;
   可以看出方法是由phonewindow中decorview调用的，而decorview继承自FrameLayout，FrameLayout继承自ViewGroup，即super.dispatchTouchEvent方法的为ViewGroup的
 dispatchTouchEvent方法。源码如下：
 ```java
+@Override
+   public boolean dispatchTouchEvent(MotionEvent ev) {
+    ...
+
+       boolean handled = false;
+       if (onFilterTouchEventForSecurity(ev)) {
+           final int action = ev.getAction();
+           final int actionMasked = action & MotionEvent.ACTION_MASK;
+
+           // 如果事件为down事件
+           if (actionMasked == MotionEvent.ACTION_DOWN) {
+          //首先清除所有之前事件，重置触摸状态
+               cancelAndClearTouchTargets(ev);
+               resetTouchState();
+           }
+
+           //事件是否被拦截
+           final boolean intercepted;
+           if (actionMasked == MotionEvent.ACTION_DOWN
+                   || mFirstTouchTarget != null) {
+                     //事件是否允许被拦截
+               final boolean disallowIntercept = (mGroupFlags & FLAG_DISALLOW_INTERCEPT) != 0;
+               //如果不允许被子view拦截则调用onInterceptTouchEvent查看viewgroup是否拦截事件，并保存action事件。event.getAction()值就是在此处设置
+               if (!disallowIntercept) {
+                   intercepted = onInterceptTouchEvent(ev);
+                   ev.setAction(action);  changed
+               } else {
+                   intercepted = false;
+               }
+           } else {
+               // 如果没有触摸目标或action不是down事件，viewgroup继续拦截此事件
+               intercepted = true;
+           }
+                           ...
+          //触摸目标制空
+           TouchTarget newTouchTarget = null;
+
+           //如果触摸事件没有被拦截或被取消
+           if (!canceled && !intercepted) {
+             //所有触摸区域view的数量
+             final int childrenCount = mChildrenCount;
+             //newTouchTarget在前面已经制空并且触摸的区域的view数量不为0
+                    if (newTouchTarget == null && childrenCount != 0) {
+                        final float x = ev.getX(actionIndex);
+                        final float y = ev.getY(actionIndex);
+                        //将触摸区域的view从前到后排序存放在列表中（view的z坐标逆序排序，即最前面的view在列表的末端）
+                        final ArrayList<View> preorderedList = buildTouchDispatchChildList();
+
+                        final View[] children = mChildren;
+                        final View child = getAndVerifyPreorderedView(
+                                   preorderedList, children, childIndex);
+                        //逆序遍历
+                        for (int i = childrenCount - 1; i >= 0; i--) {
+                          ...
+                          //
+                           if (dispatchTransformedTouchEvent(ev, false, child, idBitsToAssign)) {
+                               // Child wants to receive touch within its bounds.
+                               mLastTouchDownTime = ev.getDownTime();
+                               if (preorderedList != null) {
+                                   // childIndex points into presorted list, find original index
+                                   for (int j = 0; j < childrenCount; j++) {
+                                       if (children[childIndex] == mChildren[j]) {
+                                           mLastTouchDownIndex = j;
+                                           break;
+                                       }
+                                   }
+                               } else {
+                                   mLastTouchDownIndex = childIndex;
+                               }
+                               mLastTouchDownX = ev.getX();
+                               mLastTouchDownY = ev.getY();
+                               newTouchTarget = addTouchTarget(child, idBitsToAssign);
+                               alreadyDispatchedToNewTouchTarget = true;
+                               break;
+                           }
+
+                           // The accessibility focus didn't handle the event, so clear
+                           // the flag and do a normal dispatch to all children.
+                           ev.setTargetAccessibilityFocus(false);
+                       }
+                       if (preorderedList != null) preorderedList.clear();
+                   }
+
+
+                   if (newTouchTarget == null && mFirstTouchTarget != null) {
+                        // Did not find a child to receive the event.
+                        // Assign the pointer to the least recently added target.
+                        newTouchTarget = mFirstTouchTarget;
+                        while (newTouchTarget.next != null) {
+                            newTouchTarget = newTouchTarget.next;
+                        }
+                        newTouchTarget.pointerIdBits |= idBitsToAssign;
+                    }
+                }
+            }
+
+            // Dispatch to touch targets.
+            if (mFirstTouchTarget == null) {
+                // No touch targets so treat this as an ordinary view.
+                handled = dispatchTransformedTouchEvent(ev, canceled, null,
+                        TouchTarget.ALL_POINTER_IDS);
+            } else {
+                // Dispatch to touch targets, excluding the new touch target if we already
+                // dispatched to it.  Cancel touch targets if necessary.
+                TouchTarget predecessor = null;
+                TouchTarget target = mFirstTouchTarget;
+                while (target != null) {
+                    final TouchTarget next = target.next;
+                    if (alreadyDispatchedToNewTouchTarget && target == newTouchTarget) {
+                        handled = true;
+                    } else {
+                        final boolean cancelChild = resetCancelNextUpFlag(target.child)
+                                || intercepted;
+                        if (dispatchTransformedTouchEvent(ev, cancelChild,
+                                target.child, target.pointerIdBits)) {
+                            handled = true;
+                        }
+                        if (cancelChild) {
+                            if (predecessor == null) {
+                                mFirstTouchTarget = next;
+                            } else {
+                                predecessor.next = next;
+                            }
+                            target.recycle();
+                            target = next;
+                            continue;
+                        }
+                    }
+                    predecessor = target;
+                    target = next;
+                }
+            }
+return handled;
+}
 
 ```
