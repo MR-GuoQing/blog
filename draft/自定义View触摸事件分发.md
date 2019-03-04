@@ -106,7 +106,7 @@ dispatchTouchEvent方法。源码如下：
                    || mFirstTouchTarget != null) {
                      //事件是否允许被拦截
                final boolean disallowIntercept = (mGroupFlags & FLAG_DISALLOW_INTERCEPT) != 0;
-               //如果不允许被子view拦截则调用onInterceptTouchEvent查看viewgroup是否拦截事件，并保存action事件。event.getAction()值就是在此处设置
+               //如果不允许被子view拦截(子view可以通过requestDisallowInterceptTouchEvent方法修改disallowIntercept标志位)则调用onInterceptTouchEvent查看viewgroup是否拦截事件，并保存action事件。event.getAction()值就是在此处设置
                if (!disallowIntercept) {
                    intercepted = onInterceptTouchEvent(ev);
                    ev.setAction(action);  changed
@@ -114,14 +114,14 @@ dispatchTouchEvent方法。源码如下：
                    intercepted = false;
                }
            } else {
-               // 如果没有触摸目标或action不是down事件，viewgroup继续拦截此事件
+               // 如果mFirstTouchTarget位null并且action不是down事件，viewgroup继续拦截此事件，说明view决定拦截触摸事件，则后续move up事件将继续由viewgroup来处理
                intercepted = true;
            }
                            ...
           //触摸目标制空
            TouchTarget newTouchTarget = null;
 
-           //如果触摸事件没有被拦截或被取消
+           //如果viewgroup不拦截触摸事件并且事件没有被取消
            if (!canceled && !intercepted) {
              //所有触摸区域view的数量
              final int childrenCount = mChildrenCount;
@@ -138,12 +138,12 @@ dispatchTouchEvent方法。源码如下：
                         //逆序遍历
                         for (int i = childrenCount - 1; i >= 0; i--) {
                           ...
-                          //
-                           if (dispatchTransformedTouchEvent(ev, false, child, idBitsToAssign)) {
-                               // Child wants to receive touch within its bounds.
+                          //dispatchTransformedTouchEvent方法主要用来调用子view的dispatchTouchEvent方法，如果子view拦截了此事件，则遍历之前view的集合找到触摸view，然后通过addTouchTarget将newTouchTarget赋值，mFirstTouchTarget就是在这个方法里被赋值
+                           if(dispatchTransformedTouchEvent(ev, false, child, idBitsToAssign)) {
+
                                mLastTouchDownTime = ev.getDownTime();
                                if (preorderedList != null) {
-                                   // childIndex points into presorted list, find original index
+
                                    for (int j = 0; j < childrenCount; j++) {
                                        if (children[childIndex] == mChildren[j]) {
                                            mLastTouchDownIndex = j;
@@ -153,34 +153,16 @@ dispatchTouchEvent方法。源码如下：
                                } else {
                                    mLastTouchDownIndex = childIndex;
                                }
-                               mLastTouchDownX = ev.getX();
-                               mLastTouchDownY = ev.getY();
-                               newTouchTarget = addTouchTarget(child, idBitsToAssign);
-                               alreadyDispatchedToNewTouchTarget = true;
+
+                               newTouchTarget = addTouchTarget(child,
                                break;
                            }
-
-                           // The accessibility focus didn't handle the event, so clear
-                           // the flag and do a normal dispatch to all children.
-                           ev.setTargetAccessibilityFocus(false);
                        }
-                       if (preorderedList != null) preorderedList.clear();
                    }
 
-
-                   if (newTouchTarget == null && mFirstTouchTarget != null) {
-                        // Did not find a child to receive the event.
-                        // Assign the pointer to the least recently added target.
-                        newTouchTarget = mFirstTouchTarget;
-                        while (newTouchTarget.next != null) {
-                            newTouchTarget = newTouchTarget.next;
-                        }
-                        newTouchTarget.pointerIdBits |= idBitsToAssign;
-                    }
-                }
             }
 
-            // Dispatch to touch targets.
+            // 如果没有找到合适处理事件的view将再次调用dispatchTransformedTouchEvent方法，不过这次view是null，所以会调用super.dispatchTouchEvent(event)既view的dispatchTouchEvent方法会调用
             if (mFirstTouchTarget == null) {
                 // No touch targets so treat this as an ordinary view.
                 handled = dispatchTransformedTouchEvent(ev, canceled, null,
