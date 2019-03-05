@@ -15,11 +15,6 @@ Android中Activity是负责所有与用户交互的事务，所有可视界面�
 ```java
 /**
 //from Activity.java
-
-    * Called to process touch screen events.  You can override this to
-    * intercept all touch screen events before they are dispatched to the
-    * window.  Be sure to call this implementation for touch screen events
-    * that should be handled normally.
     *
     * @param ev The touch screen event.
     *
@@ -49,9 +44,6 @@ dispatchTouchEvent方法中所有的down事件都会先由onUserInteraction()处
 接着会调用getWindow().superDispatchTouchEvent(ev)方法，而跟进源码会发现getWindow方法返回的对象是Window。
 ```java
 /**
-   * Retrieve the current {@link android.view.Window} for the activity.
-   * This can be used to directly access parts of the Window API that
-   * are not available through Activity/Screen.
    *
    * @return Window The current window, or null if the activity is not
    *         visual.
@@ -138,7 +130,14 @@ dispatchTouchEvent方法。源码如下：
                         //逆序遍历
                         for (int i = childrenCount - 1; i >= 0; i--) {
                           ...
-                          //dispatchTransformedTouchEvent方法主要用来调用子view的dispatchTouchEvent方法，如果子view拦截了此事件，则遍历之前view的集合找到触摸view，然后通过addTouchTarget将newTouchTarget赋值，mFirstTouchTarget就是在这个方法里被赋值
+                          //首先先从TouchTarget链表中查找是否child已经在链表中，如果存在则表明child已经响应触摸事件，则直接跳出循环，如果不在则开始调用dispatchTransformedTouchEvent方法。
+                          newTouchTarget = getTouchTarget(child);
+                            if (newTouchTarget != null) {
+
+                                newTouchTarget.pointerIdBits |= idBitsToAssign;
+                                break;
+                            }
+                          //dispatchTransformedTouchEvent方法主要用来调用子view的dispatchTouchEvent方法，如果子view拦截了此事件，则遍历之前view的集合找到触摸view，然后通过addTouchTarget将newTouchTarget赋值然后break跳出循环，alreadyDispatchedToNewTouchTarget,mFirstTouchTarget就是在这个方法里被赋值,
                            if(dispatchTransformedTouchEvent(ev, false, child, idBitsToAssign)) {
 
                                mLastTouchDownTime = ev.getDownTime();
@@ -153,8 +152,10 @@ dispatchTouchEvent方法。源码如下：
                                } else {
                                    mLastTouchDownIndex = childIndex;
                                }
-
-                               newTouchTarget = addTouchTarget(child,
+                              //找到处理触摸事件的子view则将child添加到链表中并赋值newTouchTarget
+                               newTouchTarget = addTouchTarget(child);
+                              //alreadyDispatchedToNewTouchTarget标志位为ture
+                               alreadyDispatchedToNewTouchTarget = true;
                                break;
                            }
                        }
@@ -168,12 +169,12 @@ dispatchTouchEvent方法。源码如下：
                 handled = dispatchTransformedTouchEvent(ev, canceled, null,
                         TouchTarget.ALL_POINTER_IDS);
             } else {
-                // Dispatch to touch targets, excluding the new touch target if we already
-                // dispatched to it.  Cancel touch targets if necessary.
+              //如果mFirstTouchTarget不为null，则会继续遍历子view并调用子view的dispatchTransformedTouchEvent方法
                 TouchTarget predecessor = null;
                 TouchTarget target = mFirstTouchTarget;
                 while (target != null) {
                     final TouchTarget next = target.next;
+                    //链表中的子view已经处理过事件，handle直接为true，否则继续遍历链表的子view并调用dispatchTransformedTouchEvent遍历并调用其子view的didispatchTouchEvent方法
                     if (alreadyDispatchedToNewTouchTarget && target == newTouchTarget) {
                         handled = true;
                     } else {
@@ -202,3 +203,4 @@ return handled;
 }
 
 ```
+以上就是viewgroup的事件分发全过程，首先在action_down事件到来时重置所有的触摸状态，然后如果子类没有拦截viewgroup的事件，则先调用viewgroup的onInterceptTouchEvent方法来查看自己是否拦截触摸事件，如果拦截则调用viewgroup的onTouchEvent方法处理事件。如果不拦截，首先将触摸区域的view存放在列表中，并依次调用子view的dispatchTouchEvent方法，并将响应触摸事件的view存放在TouchTarget链表中，然后会继续遍历链表中的view，将事件传第到子view中。这样就完成了一轮事件分发，下面分析子view对事件分发的处理。
