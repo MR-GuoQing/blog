@@ -2,7 +2,7 @@
 layout:     post
 title:      View触摸事件分发机制源码解析
 subtitle:    ""
-date:       2018-01-5 14:20
+date:       2019-01-5 14:20
 author:     guoqing
 header-img: img/posts/post-bg-android.jpg
 catalog: true
