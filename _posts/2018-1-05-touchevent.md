@@ -2,13 +2,14 @@
 layout:     post
 title:      View触摸事件分发机制源码解析
 subtitle:    ""
-date:       2018-12-5 14:20
+date:       2018-1-5 14:20
 author:     guoqing
-header-img: img/posts/post-bg-hacker.jpg
+header-img: img/posts/post-bg-android.jpg
 catalog: true
 tags:
     - Android
-    - Android 自定义View 事件分发
+    - 事件分发
+    - 自定义view
 ---
 ### View触摸事件分发机制源码解析
 Android中Activity是负责所有与用户交互的事务，所有可视界面的创建都是从Activity开始。因此view的触摸事件的处理也是从Activity开始的，其开始处理触摸事件的方法如下所示：
@@ -204,3 +205,82 @@ return handled;
 
 ```
 以上就是viewgroup的事件分发全过程，首先在action_down事件到来时重置所有的触摸状态，然后如果子类没有拦截viewgroup的事件，则先调用viewgroup的onInterceptTouchEvent方法来查看自己是否拦截触摸事件，如果拦截则调用viewgroup的onTouchEvent方法处理事件。如果不拦截，首先将触摸区域的view存放在列表中，并依次调用子view的dispatchTouchEvent方法，并将响应触摸事件的view存放在TouchTarget链表中，然后会继续遍历链表中的view，将事件传第到子view中。这样就完成了一轮事件分发，下面分析子view对事件分发的处理。
+```java
+public boolean dispatchTouchEvent(MotionEvent event) {
+//noinspection SimplifiableIfStatement
+           ListenerInfo li = mListenerInfo;
+           if (li != null && li.mOnTouchListener != null
+                   && (mViewFlags & ENABLED_MASK) == ENABLED
+                   && li.mOnTouchListener.onTouch(this, event)) {
+               result = true;
+           }
+
+           if (!result && onTouchEvent(event)) {
+               result = true;
+           }
+       }
+}
+ return result;
+```
+ListenerInfo是个静态内部类里面封装了点击滑动事件监听接口，如常见的OnClickListener、OnTouchListener等。如果view设置了onTouchListener则会调用OnTouch方法，否则OntouchEvent方法会被调用。由此可以看出View的OnTouch方法的优先级比较高，如果返回true了则OnTouchEvent方法不会被调用。下面来看一下onTouchEvent方法。
+```java
+    public boolean onTouchEvent(MotionEvent event) {
+
+       final int action = event.getAction();
+       //clickable判断view是否可点击
+       final boolean clickable = ((viewFlags & CLICKABLE) == CLICKABLE
+               || (viewFlags & LONG_CLICKABLE) == LONG_CLICKABLE)
+               || (viewFlags & CONTEXT_CLICKABLE) == CONTEXT_CLICKABLE;
+               //如果view是disable状态，任然返回view本身的clickable状态。所以即使view本身是不可点击的，它仍然消耗事件
+          if ((viewFlags & ENABLED_MASK) == DISABLED) {
+            if (action == MotionEvent.ACTION_UP && (mPrivateFlags & PFLAG_PRESSED) != 0) {
+                setPressed(false);
+            }
+            mPrivateFlags3 &= ~PFLAG3_FINGER_DOWN;
+            // A disabled view that is clickable still consumes the touch
+            // events, it just doesn't respond to them.
+            return clickable;
+        }
+        //如果view设置了TouchDelegate，则调用Touchdelegate的onTouchEvent方法。TouchDelegate是用来增大view本身点击范围的一个帮助类。
+        if (mTouchDelegate != null) {
+            if (mTouchDelegate.onTouchEvent(event)) {
+                return true;
+            }
+        }
+        //view的点击事件发生在up事件中，首先view必须是可点击的并且不是长按事件
+        if (clickable || (viewFlags & TOOLTIP) == TOOLTIP) {
+            switch (action) {
+                case MotionEvent.ACTION_UP:
+
+                    boolean prepressed = (mPrivateFlags & PFLAG_PREPRESSED) != 0;
+                        ....
+
+                        //mHasPerformedLongPress的赋值是在down事件中的checkForLongClick中。
+                        if (!mHasPerformedLongPress && !mIgnoreNextUpEvent) {
+                            // This is a tap, so remove the longpress check
+                            removeLongPressCallback();
+
+                            // 如果是view的转状态是点击状态
+                            if (!focusTaken) {
+                              //开始执行点击事件
+                                // Use a Runnable and post this rather than calling
+                                // performClick directly. This lets other visual state
+                                // of the view update before click actions start.
+                                if (mPerformClick == null) {
+                                    mPerformClick = new PerformClick();
+                                }
+                                if (!post(mPerformClick)) {
+                                    performClick();
+                                }
+                            }
+                        }
+                        ...
+        case MotionEvent.ACTION_DOWN:
+        if (!clickable) {
+                       checkForLongClick(0, x, y);
+                       break;
+                   }
+                   ...
+
+```
+view在点击和长按状态分别会触发performClick和performLongClick事件，然后在两个方法中分别会调用ListenerInfo的onClick和onLongClick方法。以上就是view触摸事件分发机制源码的大概流程。
